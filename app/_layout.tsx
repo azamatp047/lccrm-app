@@ -1,24 +1,76 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+
+import { useFonts } from 'expo-font';
+import { Stack, useRootNavigationState, useRouter, useSegments } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import React, { useEffect } from 'react';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { LanguageProvider } from '../contexts/LanguageContext';
+import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+// Prevent the splash screen from auto-hiding before asset loading is complete.
+SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
+function RootLayoutNav() {
+  const { theme } = useTheme();
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
+
+  const rootNavigationState = useRootNavigationState();
+  const segments = useSegments();
+
+  useEffect(() => {
+    if (!rootNavigationState?.key) return;
+
+    const inLogin = segments[0] === 'login';
+
+    if (!isLoading) {
+      if (!user && !inLogin) {
+        router.replace('/login');
+      } else if (user && inLogin) {
+        router.replace('/(tabs)');
+      }
+    }
+  }, [user, isLoading, rootNavigationState, segments]);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
+    <>
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    </>
+  );
+}
+
+export default function RootLayout() {
+  const [loaded, error] = useFonts({
+    // Load any custom fonts here if needed
+  });
+
+  useEffect(() => {
+    if (error) throw error;
+  }, [error]);
+
+  useEffect(() => {
+    if (loaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded]);
+
+  // if (!loaded) {
+  //   return null;
+  // }
+
+  return (
+    <AuthProvider>
+      <LanguageProvider>
+        <ThemeProvider>
+          <RootLayoutNav />
+        </ThemeProvider>
+      </LanguageProvider>
+    </AuthProvider>
   );
 }
