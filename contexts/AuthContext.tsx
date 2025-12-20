@@ -1,7 +1,7 @@
 
 import { useRouter } from 'expo-router';
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { AuthApi } from '../services/api';
+import { AuthApi, StudentApi } from '../services/api';
 import { StorageService, TokenStorage } from '../services/storage';
 
 interface User {
@@ -67,6 +67,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         restoreSession();
     }, []);
 
+
     const login = async (username: string, password: string, role: 'student' | 'parent') => {
         try {
             setIsLoading(true);
@@ -76,19 +77,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
 
             const data = await AuthApi.login(username, password);
-            await TokenStorage.setTokens(data.access_token, data.refresh_token);
 
-            const userData: User = {
-                ...data.user,
-                role: 'student', // Enforce role from context
-            };
+            // Handle Tokens: Support both access/refresh and access_token/refresh_token
+            const accessToken = data.access || data.access_token || (data as any).token;
+            const refreshToken = data.refresh || data.refresh_token;
+
+            if (accessToken) {
+                await TokenStorage.setTokens(accessToken, refreshToken || '');
+            } else {
+                // If no token found, maybe cookie based? 
+                // But for now assume token must be present if not error.
+                // If the backend is strictly cookie-based, we might proceed.
+                // console.warn('No access token found in login response');
+            }
+
+            // Handle User Data
+            let userData: User;
+
+            if (data.user) {
+                userData = {
+                    ...data.user,
+                    role: 'student',
+                };
+            } else {
+                // Fetch Profile if not provided in login response
+                const profile = await StudentApi.getProfile();
+                userData = {
+                    username: profile.username,
+                    full_name: `${profile.first_name} ${profile.last_name}`.trim(),
+                    picture: profile.picture,
+                    coins: 0, // Profile doesn't return coins directly, defaulting to 0
+                    role: 'student',
+                };
+            }
 
             setUser(userData);
-            // Persist basic user info
             await StorageService.setItem('user_data', JSON.stringify(userData));
 
             router.replace('/(tabs)');
         } catch (error) {
+            console.error('Login error:', error);
             throw error;
         } finally {
             setIsLoading(false);

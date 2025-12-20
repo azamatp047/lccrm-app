@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState } from 'react';
 import { Translations } from '../constants/Translations';
+import { setApiLanguage } from '../services/api';
 
 type Language = 'uz' | 'ru' | 'en';
 
@@ -17,7 +18,12 @@ const LanguageContext = createContext<LanguageContextType>({
 });
 
 export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
-    const [language, setLanguage] = useState<Language>('uz');
+    const [language, setLanguageState] = useState<Language>('uz');
+
+    const setLanguage = (lang: Language) => {
+        setLanguageState(lang);
+        setApiLanguage(lang);
+    };
 
     const i18n = Translations[language];
 

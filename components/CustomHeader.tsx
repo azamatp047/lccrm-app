@@ -1,6 +1,6 @@
 
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     FlatList,
     Modal,
@@ -15,13 +15,9 @@ import { Colors } from '../constants/Colors';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { StudentApi, StudentNotification } from '../services/api';
 
-// Mock Data
-const NOTIFICATIONS = [
-    { id: '1', title: 'New Homework', desc: 'Math homework added', date: '10:00' },
-    { id: '2', title: 'Lesson Cancelled', desc: 'Physics lesson cancelled', date: 'Yesterday' },
-];
-
+// Static Data for Coins Actions (Example buttons)
 const COIN_ACTIONS = [
     { id: '1', key: 'homework', icon: 'book', amount: '+50' },
     { id: '2', key: 'lessons', icon: 'videocam', amount: '+20' },
@@ -37,8 +33,42 @@ export default function CustomHeader() {
     const colors = Colors[theme];
 
     const [activeModal, setActiveModal] = useState<'none' | 'coins' | 'notifications' | 'profile'>('none');
+    const [notifications, setNotifications] = useState<StudentNotification[]>([]);
+    const [unreadCount, setUnreadCount] = useState(0);
 
-    const closeModals = () => setActiveModal('none');
+    useEffect(() => {
+        fetchNotifications();
+    }, []);
+
+    const fetchNotifications = async () => {
+        try {
+            const response = await StudentApi.getNotifications({ limit: 10 });
+            if (response && response.results) {
+                setNotifications(response.results);
+                // Assume all are unread or we check `is_read` if available in list.
+                // Spec for StudentNotification -> Notification schema doesn't have `is_read`.
+                // Notification schema has `id, created_at, title...`.
+                // UserNotificationsUpdate has `is_read`.
+                // It seems the "list" might just be recent notifications.
+                // We'll just show the count of total recent ones for now.
+                setUnreadCount(response.count);
+            }
+        } catch (e) {
+            console.warn('Failed to fetch notifications', e);
+        }
+    };
+
+    const closeModals = () => {
+        setActiveModal('none');
+        if (activeModal === 'notifications') {
+            // Mark as read logic? 
+            // The API has `markNotificationRead` which is a GET request (?!)
+            // We can call it when closing or opening.
+            // Let's call it when opening strictly speaking, but here simple logic:
+            StudentApi.markNotificationRead().catch(e => console.warn(e));
+            setUnreadCount(0);
+        }
+    };
 
     const cycleLanguage = () => {
         const next = {
@@ -75,13 +105,24 @@ export default function CustomHeader() {
                     <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
                         <Text style={[styles.modalTitle, { color: colors.text }]}>{i18n.notifications}</Text>
                         <FlatList
-                            data={NOTIFICATIONS}
-                            keyExtractor={(item) => item.id}
+                            data={notifications}
+                            keyExtractor={(item) => item.id.toString()}
+                            ListEmptyComponent={<Text style={{ padding: 20, textAlign: 'center', color: colors.placeholder }}>No notifications</Text>}
                             renderItem={({ item }) => (
                                 <View style={[styles.notifItem, { borderBottomColor: colors.border }]}>
-                                    <Text style={[styles.notifTitle, { color: colors.text }]}>{item.title}</Text>
-                                    <Text style={[styles.notifDesc, { color: colors.placeholder }]}>{item.desc}</Text>
-                                    <Text style={[styles.notifDate, { color: colors.placeholder }]}>{item.date}</Text>
+                                    <Text style={[styles.notifTitle, { color: colors.text }]}>
+                                        {language === 'uz' ? item.notification.title_uz || item.notification.title
+                                            : language === 'ru' ? item.notification.title_ru || item.notification.title
+                                                : item.notification.title_en || item.notification.title}
+                                    </Text>
+                                    <Text style={[styles.notifDesc, { color: colors.placeholder }]}>
+                                        {language === 'uz' ? item.notification.message_uz || item.notification.message
+                                            : language === 'ru' ? item.notification.message_ru || item.notification.message
+                                                : item.notification.message_en || item.notification.message}
+                                    </Text>
+                                    <Text style={[styles.notifDate, { color: colors.placeholder }]}>
+                                        {new Date(item.notification.created_at).toLocaleDateString()}
+                                    </Text>
                                 </View>
                             )}
                         />
@@ -138,9 +179,11 @@ export default function CustomHeader() {
                         onPress={() => setActiveModal('notifications')}
                     >
                         <Ionicons name="notifications-outline" size={26} color={colors.text} />
-                        <View style={[styles.badgeContainer, { backgroundColor: 'red' }]}>
-                            <Text style={styles.badgeText}>{NOTIFICATIONS.length}</Text>
-                        </View>
+                        {unreadCount > 0 && (
+                            <View style={[styles.badgeContainer, { backgroundColor: 'red' }]}>
+                                <Text style={styles.badgeText}>{unreadCount}</Text>
+                            </View>
+                        )}
                     </TouchableOpacity>
 
                     {/* Profile */}
@@ -255,6 +298,8 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 4.65,
         elevation: 8,
+        // Max height for notification list
+        maxHeight: 400,
     },
     modalTitle: {
         fontSize: 20,
@@ -295,6 +340,7 @@ const styles = StyleSheet.create({
     notifDate: {
         fontSize: 12,
         textAlign: 'right',
+        opacity: 0.6
     },
     coinAmount: {
         fontWeight: 'bold',

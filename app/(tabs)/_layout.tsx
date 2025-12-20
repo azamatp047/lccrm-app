@@ -62,7 +62,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: i18n.profile,
-          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />, 
         }}
       />
     </Tabs>
