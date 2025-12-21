@@ -147,6 +147,30 @@ interface RefreshResponse {
     refresh: string;
 }
 
+// --- Course Interfaces ---
+
+export interface CourseProgress {
+    all_lessons: number;
+    completed_lesson_count: number;
+    progress_rate: number;
+}
+
+export interface CourseTeacher {
+    id: number;
+    name: string;
+    // Add other fields if known, for now assume name is what we need
+}
+
+export interface Course {
+    id: number;
+    group_name: string;
+    course_name: string;
+    duration: string;
+    progress: CourseProgress;
+    student_count: number;
+    teachers: CourseTeacher[]; // Based on usage, it's an array of objects with name
+}
+
 // Helpers
 class ApiError extends Error {
     constructor(public status: number, public message: string) {
@@ -361,6 +385,7 @@ export const StudentApi = {
     getStudentGroups: async (params: { limit?: number; offset?: number; ordering?: string } = {}) => {
         const query = new URLSearchParams(params as any).toString();
         // Spec: /api/v1/students/student-groups/
-        return await request<any>(`/student-groups/?${query}`); // Spec says: No response body.
+        // User provided JSON confirms it returns a standard paginated response
+        return await request<PaginatedResponse<Course>>(`/student-groups/?${query}`);
     },
 };

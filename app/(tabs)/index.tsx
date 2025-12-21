@@ -1,4 +1,3 @@
-
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -19,7 +18,7 @@ import { StudentApi } from '../../services/api';
 
 export default function HomeScreen() {
   const { theme } = useTheme();
-  const { i18n, language } = useLanguage();
+  const { i18n } = useLanguage();
   const colors = Colors[theme];
   const router = useRouter();
 
@@ -32,7 +31,6 @@ export default function HomeScreen() {
   const [lessons, setLessons] = useState<any[]>([]);
 
   const GROUPS_PAGE_SIZE = 10;
-
 
   const fetchGroups = async (page = 1, append = false) => {
     try {
@@ -91,19 +89,9 @@ export default function HomeScreen() {
     router.push({ pathname: '/(tabs)/course-detail', params: { id: group.id } });
   };
 
-
-  // Helper to get localized course name
-  const getCourseName = (item: any) => {
-    // Try language-specific fields if available, fallback to generic
-    if (language === 'ru' && item.course_name_ru) return item.course_name_ru;
-    if (language === 'en' && item.course_name_en) return item.course_name_en;
-    if (language === 'uz' && item.course_name_uz) return item.course_name_uz;
-    return item.course_name || item.name || 'Course';
-  };
-
   const renderGroupItem = ({ item }: { item: any }) => (
     <HomeCourseCard
-      title={getCourseName(item)}
+      title={item.course_name || item.group_name}
       completed={item.progress?.completed_lesson_count || 0}
       total={item.progress?.all_lessons || 0}
       progress={item.progress?.progress_rate || 0}
@@ -112,85 +100,97 @@ export default function HomeScreen() {
     />
   );
 
-  const renderLessonItem = ({ item }: { item: any }) => (
-    <View style={[styles.lessonCard, { backgroundColor: colors.surface }]}>
-      <View style={[styles.dateBox, { backgroundColor: colors.background }]}>
-        {/* Parsing date if available */}
-        <Text style={[styles.dateText, { color: colors.text }]}>
-          {item.date || 'Today'}
-        </Text>
-      </View>
-      <View style={{ flex: 1, paddingLeft: 12 }}>
-        <Text style={[styles.lessonTitle, { color: colors.text }]}>{item.topic || 'No Topic'}</Text>
-        <Text style={[styles.lessonTime, { color: colors.primary }]}>
-          {item.start_time} - {item.end_time}
-        </Text>
-      </View>
-      {item.status === 'ended' && (
-        <Ionicons name="checkmark-circle" size={20} color={colors.secondary} />
-      )}
-    </View>
-  );
-
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}> 
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
+        renderItem={() => null}
         ListHeaderComponent={
           <>
-            <View style={styles.headerRow}>
-              <Text style={[styles.headerTitle, { color: colors.text }]}>Active Courses</Text>
-              <TouchableOpacity onPress={handleViewAll} style={styles.viewAllBtn}>
-                <Text style={styles.viewAllText}>View all &gt;</Text>
-              </TouchableOpacity>
+            {/* Active Courses Section */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                  Active Courses
+                </Text>
+                <TouchableOpacity onPress={handleViewAll} style={styles.viewAllBtn}>
+                  <Text style={[styles.viewAllText, { color: colors.primary }]}>
+                    View all &gt;
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Course Cards - Show first 6 */}
+              {loading && groups.length === 0 ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator color={colors.primary} size="large" />
+                </View>
+              ) : groups.length > 0 ? (
+                groups.slice(0, 6).map((group: any) => (
+                  <HomeCourseCard
+                    key={group.id}
+                    title={group.course_name || group.group_name}
+                    completed={group.progress?.completed_lesson_count || 0}
+                    total={group.progress?.all_lessons || 0}
+                    progress={group.progress?.progress_rate || 0}
+                    onPress={() => handleCoursePress(group)}
+                    colors={colors}
+                  />
+                ))
+              ) : (
+                <View style={styles.emptyContainer}>
+                  <Text style={{ color: colors.placeholder }}>No active courses</Text>
+                </View>
+              )}
             </View>
+
             {/* Lessons Section */}
             <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 12 }]}>Lessons</Text>
-              {lessons && lessons.length > 0 ? lessons.map((lesson: any) => (
-                <View
-                  key={lesson.id}
-                  style={[
-                    styles.lessonCard,
-                    lesson.status === 'ended'
-                      ? { backgroundColor: '#22c55e22' }
-                      : lesson.status === 'current'
-                      ? { backgroundColor: '#2563eb22' }
-                      : { backgroundColor: colors.surface, opacity: 0.6 },
-                  ]}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.lessonTitle, { color: colors.text }]}>
-                      {lesson.topic || 'No topic'}
-                    </Text>
-                    <Text style={[styles.lessonTime, { color: colors.primary }]}> 
-                      {lesson.start_time} - {lesson.end_time}
-                    </Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Today's Lessons
+              </Text>
+              {lessons && lessons.length > 0 ? (
+                lessons.map((lesson: any) => (
+                  <View
+                    key={lesson.id}
+                    style={[
+                      styles.lessonCard,
+                      lesson.status === 'ended'
+                        ? { backgroundColor: '#DCFCE7' }
+                        : lesson.status === 'current'
+                        ? { backgroundColor: '#DBEAFE' }
+                        : { backgroundColor: colors.surface, opacity: 0.6 },
+                    ]}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.lessonTitle, { color: colors.text }]}>
+                        {lesson.topic || 'No topic'}
+                      </Text>
+                      <Text style={[styles.lessonTime, { color: colors.primary }]}>
+                        {lesson.start_time} - {lesson.end_time}
+                      </Text>
+                    </View>
+                    {lesson.status === 'ended' && (
+                      <Ionicons name="checkmark-circle" size={24} color="#16A34A" />
+                    )}
+                    {lesson.status === 'current' && (
+                      <Ionicons name="play-circle" size={24} color="#2563EB" />
+                    )}
+                    {lesson.status !== 'ended' && lesson.status !== 'current' && (
+                      <Ionicons name="close-circle" size={24} color={colors.placeholder} />
+                    )}
                   </View>
-                  {lesson.status === 'ended' && (
-                    <Ionicons name="checkmark-circle" size={22} color="#22c55e" />
-                  )}
-                  {lesson.status === 'current' && (
-                    <Ionicons name="play" size={22} color="#2563eb" />
-                  )}
-                  {lesson.status !== 'ended' && lesson.status !== 'current' && (
-                    <Ionicons name="close-circle" size={22} color={colors.placeholder} />
-                  )}
+                ))
+              ) : (
+                <View style={styles.emptyContainer}>
+                  <Text style={{ color: colors.placeholder }}>No lessons today</Text>
                 </View>
-              )) : (
-                <Text style={{ color: colors.placeholder }}>No lessons</Text>
               )}
             </View>
           </>
         }
-        data={groups}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderGroupItem}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
+        data={[]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        ListEmptyComponent={loading ? <ActivityIndicator color={colors.primary} /> : <Text style={{ color: colors.placeholder, textAlign: 'center', marginTop: 32 }}>No active courses found</Text>}
         contentContainerStyle={styles.scrollContent}
-        ListFooterComponent={loading && groups.length > 0 ? <ActivityIndicator color={colors.primary} /> : null}
       />
     </View>
   );
@@ -204,14 +204,17 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
   },
-  headerRow: {
+  section: {
+    marginBottom: 32,
+  },
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginBottom: 16,
   },
-  headerTitle: {
-    fontSize: 32,
+  sectionTitle: {
+    fontSize: 24,
     fontWeight: 'bold',
   },
   viewAllBtn: {
@@ -219,71 +222,33 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   viewAllText: {
-    color: '#4f8cff',
-    fontWeight: 'bold',
+    fontWeight: '600',
     fontSize: 16,
   },
-  section: {
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 16,
-    width: 200,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-    gap: 12,
-  },
-  iconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: 'center',
+  loadingContainer: {
+    paddingVertical: 40,
     alignItems: 'center',
   },
-  cardTitle: {
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  cardSub: {
-    fontSize: 12,
+  emptyContainer: {
+    paddingVertical: 40,
+    alignItems: 'center',
   },
   lessonCard: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    borderRadius: 16,
-    shadowColor: "#000",
+    borderRadius: 14,
+    marginBottom: 12,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  dateBox: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dateText: {
-    fontWeight: 'bold',
-    fontSize: 14,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   lessonTitle: {
-    fontWeight: 'bold',
+    fontWeight: '600',
     fontSize: 16,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   lessonTime: {
     fontSize: 14,
