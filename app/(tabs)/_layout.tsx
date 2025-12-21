@@ -18,9 +18,21 @@ export default function TabLayout() {
         header: () => <CustomHeader />,
         tabBarStyle: {
           backgroundColor: colors.surface,
-          borderTopColor: colors.border,
+          borderTopColor: 'transparent',
           height: 60,
           paddingBottom: 8,
+          marginBottom: 10,
+          marginHorizontal: 10,
+          borderRadius: 20,
+          position: 'absolute', // Required for floating effect
+          shadowColor: '#000',
+          shadowOffset: {
+            width: 0,
+            height: 4,
+          },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          elevation: 5,
         },
         tabBarActiveTintColor: colors.tint,
         tabBarInactiveTintColor: colors.tabIconDefault,
@@ -62,7 +74,26 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: i18n.profile,
-          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />, 
+          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="course-detail"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="lesson-detail"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="submit-homework"
+        options={{
+          href: null,
+          tabBarStyle: { display: 'none' }, // Check if this hides the tab bar ON the page too, usually desirable for full screen forms
         }}
       />
     </Tabs>

@@ -112,7 +112,7 @@ const LessonCard = ({
         <TouchableOpacity
             style={[
                 styles.lessonCard,
-                { 
+                {
                     backgroundColor: config.bg,
                     borderColor: config.borderColor,
                     borderWidth: 1.5,
@@ -161,7 +161,7 @@ export default function CourseDetailScreen() {
     const colors = Colors[theme];
     const { id } = useLocalSearchParams();
     const router = useRouter();
-    
+
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [course, setCourse] = useState<CourseDetail | null>(null);
@@ -198,9 +198,10 @@ export default function CourseDetailScreen() {
     };
 
     const handleLessonPress = (lesson: Lesson) => {
-        console.log('Lesson clicked:', lesson.id);
-        // Navigate to lesson detail or player screen
-        // router.push({ pathname: '/lesson-detail', params: { lessonId: lesson.id } });
+        router.push({
+            pathname: '/(tabs)/lesson-detail',
+            params: { groupId: id as string, lessonId: lesson.id }
+        });
     };
 
     if (loading && !refreshing) {
@@ -241,9 +242,9 @@ export default function CourseDetailScreen() {
                         <Text style={[styles.detailProgress, { color: colors.placeholder }]}>
                             {course.progress.completed_lesson_count} of {course.progress.all_lessons} lessons completed
                         </Text>
-                        <AnimatedProgressBar 
-                            progress={course.progress.progress_rate} 
-                            colors={colors} 
+                        <AnimatedProgressBar
+                            progress={course.progress.progress_rate}
+                            colors={colors}
                         />
                     </View>
                 }

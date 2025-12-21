@@ -2,6 +2,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     FlatList,
     Modal,
     Pressable,
@@ -15,15 +16,7 @@ import { Colors } from '../constants/Colors';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { StudentApi, StudentNotification } from '../services/api';
-
-// Static Data for Coins Actions (Example buttons)
-const COIN_ACTIONS = [
-    { id: '1', key: 'homework', icon: 'book', amount: '+50' },
-    { id: '2', key: 'lessons', icon: 'videocam', amount: '+20' },
-    { id: '3', key: 'quiz', icon: 'help-circle', amount: '+100' },
-    { id: '4', key: 'daily', icon: 'calendar', amount: '+10' },
-];
+import { CoinInstance, StudentApi, StudentNotification } from '../services/api';
 
 export default function CustomHeader() {
     const insets = useSafeAreaInsets();
@@ -33,24 +26,33 @@ export default function CustomHeader() {
     const colors = Colors[theme];
 
     const [activeModal, setActiveModal] = useState<'none' | 'coins' | 'notifications' | 'profile'>('none');
+
+    // Notifications State
     const [notifications, setNotifications] = useState<StudentNotification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
+
+    // Coins State
+    const [coins, setCoins] = useState<CoinInstance[]>([]);
+    const [loadingCoins, setLoadingCoins] = useState(false);
+    const [coinPage, setCoinPage] = useState(1);
+    const [hasMoreCoins, setHasMoreCoins] = useState(true);
+    const COIN_LIMIT = 10;
 
     useEffect(() => {
         fetchNotifications();
     }, []);
+
+    useEffect(() => {
+        if (activeModal === 'coins') {
+            fetchCoins(1, false);
+        }
+    }, [activeModal]);
 
     const fetchNotifications = async () => {
         try {
             const response = await StudentApi.getNotifications({ limit: 10 });
             if (response && response.results) {
                 setNotifications(response.results);
-                // Assume all are unread or we check `is_read` if available in list.
-                // Spec for StudentNotification -> Notification schema doesn't have `is_read`.
-                // Notification schema has `id, created_at, title...`.
-                // UserNotificationsUpdate has `is_read`.
-                // It seems the "list" might just be recent notifications.
-                // We'll just show the count of total recent ones for now.
                 setUnreadCount(response.count);
             }
         } catch (e) {
@@ -58,13 +60,38 @@ export default function CustomHeader() {
         }
     };
 
+    const fetchCoins = async (page: number, append: boolean) => {
+        if (loadingCoins || (!hasMoreCoins && append)) return;
+
+        try {
+            setLoadingCoins(true);
+            const offset = (page - 1) * COIN_LIMIT;
+            const response = await StudentApi.getCoins({ limit: COIN_LIMIT, offset });
+
+            if (append) {
+                setCoins(prev => [...prev, ...response.results]);
+            } else {
+                setCoins(response.results);
+            }
+
+            setHasMoreCoins(!!response.next);
+            setCoinPage(page);
+        } catch (e) {
+            console.warn('Failed to fetch coins', e);
+        } finally {
+            setLoadingCoins(false);
+        }
+    };
+
+    const handleLoadMoreCoins = () => {
+        if (hasMoreCoins && !loadingCoins) {
+            fetchCoins(coinPage + 1, true);
+        }
+    };
+
     const closeModals = () => {
         setActiveModal('none');
         if (activeModal === 'notifications') {
-            // Mark as read logic? 
-            // The API has `markNotificationRead` which is a GET request (?!)
-            // We can call it when closing or opening.
-            // Let's call it when opening strictly speaking, but here simple logic:
             StudentApi.markNotificationRead().catch(e => console.warn(e));
             setUnreadCount(0);
         }
@@ -79,25 +106,69 @@ export default function CustomHeader() {
         setLanguage(next);
     };
 
+    const renderCoinItem = ({ item }: { item: CoinInstance }) => {
+        const isPositive = (item.extra_coins || 0) >= 0;
+        const iconName = item.category.category_name.toLowerCase().includes('uy ishi') ? 'home'
+            : item.category.category_name.toLowerCase().includes('faol') ? 'flash'
+                : 'diamond';
+
+        return (
+            <View style={[styles.coinItem, { backgroundColor: theme === 'dark' ? '#1c1c1e' : '#f2f2f7' }]}>
+                <View style={[styles.coinIconBox, { backgroundColor: colors.primary + '20' }]}>
+                    <Ionicons name={iconName as any} size={20} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                    <Text style={[styles.coinReason, { color: colors.text }]}>
+                        {language === 'uz' ? item.extra_coin_reason_uz || item.extra_coin_reason
+                            : language === 'ru' ? item.extra_coin_reason_ru || item.extra_coin_reason
+                                : item.extra_coin_reason_en || item.extra_coin_reason}
+                    </Text>
+                    <Text style={[styles.coinDate, { color: colors.placeholder }]}>
+                        {new Date(item.created_at).toLocaleDateString()}
+                    </Text>
+                </View>
+                <Text style={[styles.coinValue, { color: isPositive ? colors.primary : '#ff453a' }]}>
+                    {isPositive ? '+' : ''}{item.extra_coins || item.category.coin_count}
+                </Text>
+            </View>
+        );
+    };
+
     const renderModalContent = () => {
         switch (activeModal) {
             case 'coins':
                 return (
-                    <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-                        <Text style={[styles.modalTitle, { color: colors.text }]}>{i18n.coins}</Text>
-                        {COIN_ACTIONS.map((item) => (
-                            <TouchableOpacity key={item.id} style={styles.menuItem}>
-                                <View style={[styles.iconBox, { backgroundColor: colors.primary }]}>
-                                    <Ionicons name={item.icon as any} size={20} color="#fff" />
-                                </View>
-                                <Text style={[styles.menuText, { color: colors.text, flex: 1 }]}>
-                                    {i18n[item.key as keyof typeof i18n]}
-                                </Text>
-                                <Text style={[styles.coinAmount, { color: colors.primary }]}>
-                                    {item.amount}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
+                    <View style={[styles.modalContent, { backgroundColor: colors.surface, maxHeight: 500 }]}>
+                        <View style={styles.modalHeader}>
+                            <Ionicons name="diamond" size={24} color={colors.primary} />
+                            <Text style={[styles.modalTitle, { color: colors.text, marginBottom: 0 }]}>{i18n.coins}</Text>
+                        </View>
+
+                        <View style={[styles.totalCoinsBox, { backgroundColor: colors.primary + '10' }]}>
+                            <Text style={[styles.totalCoinsLabel, { color: colors.placeholder }]}>Total Balance</Text>
+                            <Text style={[styles.totalCoinsAmount, { color: colors.text }]}>{user?.coins || 0}</Text>
+                        </View>
+
+                        <FlatList
+                            data={coins}
+                            keyExtractor={(item) => item.id.toString()}
+                            renderItem={renderCoinItem}
+                            onEndReached={handleLoadMoreCoins}
+                            onEndReachedThreshold={0.5}
+                            ListEmptyComponent={
+                                loadingCoins ? (
+                                    <ActivityIndicator style={{ margin: 20 }} color={colors.primary} />
+                                ) : (
+                                    <Text style={{ padding: 20, textAlign: 'center', color: colors.placeholder }}>No coin history</Text>
+                                )
+                            }
+                            ListFooterComponent={
+                                loadingCoins && coins.length > 0 ? (
+                                    <ActivityIndicator style={{ marginVertical: 10 }} color={colors.primary} />
+                                ) : null
+                            }
+                            contentContainerStyle={{ paddingBottom: 10 }}
+                        />
                     </View>
                 );
             case 'notifications':
@@ -133,15 +204,21 @@ export default function CustomHeader() {
                     <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
                         <Text style={[styles.modalTitle, { color: colors.text }]}>{i18n.profile}</Text>
                         <TouchableOpacity onPress={toggleTheme} style={styles.menuItem}>
-                            <Ionicons name={theme === 'dark' ? 'moon' : 'sunny'} size={24} color={colors.text} />
+                            <View style={[styles.iconBox, { backgroundColor: colors.background }]}>
+                                <Ionicons name={theme === 'dark' ? 'moon' : 'sunny'} size={20} color={colors.text} />
+                            </View>
                             <Text style={[styles.menuText, { color: colors.text }]}>{i18n.theme}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={cycleLanguage} style={styles.menuItem}>
-                            <Ionicons name="language" size={24} color={colors.text} />
+                            <View style={[styles.iconBox, { backgroundColor: colors.background }]}>
+                                <Ionicons name="language" size={20} color={colors.text} />
+                            </View>
                             <Text style={[styles.menuText, { color: colors.text }]}>{i18n.language} ({language.toUpperCase()})</Text>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={logout} style={styles.menuItem}>
-                            <Ionicons name="log-out-outline" size={24} color={colors.error} />
+                            <View style={[styles.iconBox, { backgroundColor: colors.error + '15' }]}>
+                                <Ionicons name="log-out-outline" size={20} color={colors.error} />
+                            </View>
                             <Text style={[styles.menuText, { color: colors.error }]}>{i18n.logout}</Text>
                         </TouchableOpacity>
                     </View>
@@ -169,7 +246,7 @@ export default function CustomHeader() {
                         style={[styles.coinPill, { backgroundColor: colors.background, borderColor: colors.primary }]}
                         onPress={() => setActiveModal('coins')}
                     >
-                        <Ionicons name="cash" size={16} color={colors.primary} />
+                        <Ionicons name="diamond" size={16} color={colors.primary} />
                         <Text style={[styles.coinText, { color: colors.primary }]}>{user?.coins || 0}</Text>
                     </TouchableOpacity>
 
@@ -263,69 +340,109 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 16,
-        borderWidth: 1,
-        gap: 4,
+        borderWidth: 1.5,
+        gap: 6,
     },
     coinText: {
-        fontWeight: 'bold',
+        fontWeight: '800',
         fontSize: 14,
-    },
-    badge: {
-        position: 'absolute',
-        top: 4,
-        right: 4,
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: 'red',
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(0,0,0,0.6)',
         justifyContent: 'center',
         alignItems: 'center',
     },
     modalContainer: {
-        width: '80%',
-        maxWidth: 300,
+        width: '90%',
+        maxWidth: 400,
     },
     modalContent: {
-        borderRadius: 20,
-        padding: 20,
+        borderRadius: 24,
+        padding: 24,
         width: '100%',
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4.65,
-        elevation: 8,
-        // Max height for notification list
-        maxHeight: 400,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
+        elevation: 12,
+        maxHeight: '80%',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        marginBottom: 20,
     },
     modalTitle: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: 'bold',
-        marginBottom: 16,
         textAlign: 'center',
+    },
+    totalCoinsBox: {
+        padding: 16,
+        borderRadius: 16,
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    totalCoinsLabel: {
+        fontSize: 12,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        marginBottom: 4,
+    },
+    totalCoinsAmount: {
+        fontSize: 32,
+        fontWeight: '900',
+    },
+    coinItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        borderRadius: 16,
+        marginBottom: 10,
+        gap: 12,
+    },
+    coinIconBox: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    coinReason: {
+        fontSize: 15,
+        fontWeight: '600',
+    },
+    coinDate: {
+        fontSize: 12,
+        marginTop: 2,
+    },
+    coinValue: {
+        fontSize: 16,
+        fontWeight: '800',
     },
     menuItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 12,
-        gap: 12,
+        paddingVertical: 14,
+        gap: 16,
     },
     iconBox: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
+        width: 40,
+        height: 40,
+        borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
     },
     menuText: {
-        fontSize: 16,
-        fontWeight: '500',
+        fontSize: 17,
+        fontWeight: '600',
     },
     notifItem: {
-        paddingVertical: 12,
+        paddingVertical: 14,
         borderBottomWidth: 1,
     },
     notifTitle: {
@@ -335,27 +452,25 @@ const styles = StyleSheet.create({
     },
     notifDesc: {
         fontSize: 14,
-        marginBottom: 4,
+        marginBottom: 6,
     },
     notifDate: {
         fontSize: 12,
         textAlign: 'right',
         opacity: 0.6
     },
-    coinAmount: {
-        fontWeight: 'bold',
-        fontSize: 14,
-    },
     badgeContainer: {
         position: 'absolute',
         top: -4,
         right: -4,
-        minWidth: 16,
-        height: 16,
-        borderRadius: 8,
+        minWidth: 18,
+        height: 18,
+        borderRadius: 9,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 4,
+        backgroundColor: '#ff3b30',
+        borderWidth: 2,
+        borderColor: '#fff',
     },
     badgeText: {
         color: '#fff',
@@ -363,3 +478,4 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
 });
+

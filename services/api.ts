@@ -45,10 +45,16 @@ export interface GroupDetails {
     progress: string;
 }
 
+export interface RankingStudent {
+    id: number;
+    user: string;
+    coin: number;
+}
+
 export interface StudentGroupRatings {
     id: number;
     name: string;
-    students: string; // Likely JSON string of student ratings or HTML/text representation? Spec says 'string'
+    students: RankingStudent[];
 }
 
 export interface PaginatedResponse<T> {
@@ -169,6 +175,12 @@ export interface Course {
     progress: CourseProgress;
     student_count: number;
     teachers: CourseTeacher[]; // Based on usage, it's an array of objects with name
+}
+
+export interface AttendanceStatistics {
+    present_attendance_count: number;
+    absent_attendance_count: number;
+    rate_attendance_count: number;
 }
 
 // Helpers
@@ -366,7 +378,7 @@ export const StudentApi = {
 
     getCoins: async (params: { limit?: number; offset?: number; ordering?: string } = {}) => {
         const query = new URLSearchParams(params as any).toString();
-        return await request<PaginatedResponse<CoinInstance>>(`/profile/coins/?${query}`);
+        return await request<PaginatedResponse<CoinInstance>>(`/common/coins/?${query}`);
     },
 
     getNotifications: async (params: { limit?: number; offset?: number; ordering?: string } = {}) => {
@@ -387,5 +399,11 @@ export const StudentApi = {
         // Spec: /api/v1/students/student-groups/
         // User provided JSON confirms it returns a standard paginated response
         return await request<PaginatedResponse<Course>>(`/student-groups/?${query}`);
+    },
+
+    getAttendanceStatistics: async (): Promise<AttendanceStatistics> => {
+        // Full URL: https://lccrm.uz/api/v1/students/dashboard/attendance/statistics/
+        // Base URL is https://lccrm.uz/api/v1/students
+        return await request<AttendanceStatistics>('/dashboard/attendance/statistics/');
     },
 };

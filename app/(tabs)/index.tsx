@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { AttendanceStatisticsCard } from '../../components/AttendanceStatistics';
 import { HomeCourseCard } from '../../components/HomeCourseCard';
 import { Colors } from '../../constants/Colors';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -106,6 +107,8 @@ export default function HomeScreen() {
         renderItem={() => null}
         ListHeaderComponent={
           <>
+            <AttendanceStatisticsCard key={refreshing ? 'refreshing' : 'stable'} />
+
             {/* Active Courses Section */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
@@ -157,8 +160,8 @@ export default function HomeScreen() {
                       lesson.status === 'ended'
                         ? { backgroundColor: '#DCFCE7' }
                         : lesson.status === 'current'
-                        ? { backgroundColor: '#DBEAFE' }
-                        : { backgroundColor: colors.surface, opacity: 0.6 },
+                          ? { backgroundColor: '#DBEAFE' }
+                          : { backgroundColor: colors.surface, opacity: 0.6 },
                     ]}
                   >
                     <View style={{ flex: 1 }}>
