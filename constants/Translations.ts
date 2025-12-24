@@ -25,6 +25,9 @@ export const Translations = {
         coming_soon: 'Tez kunda...',
         theme: 'Mavzu',
         language: 'Til',
+        cancel: 'Bekor qilish',
+        confirm_logout: 'Chiqish',
+        logout_confirm_desc: 'Haqiqatan ham hisobingizdan chiqmoqchimisiz?',
     },
     ru: {
         login_title: 'Вход',
@@ -51,6 +54,9 @@ export const Translations = {
         coming_soon: 'Скоро...',
         theme: 'Тема',
         language: 'Язык',
+        cancel: 'Отмена',
+        confirm_logout: 'Выйти',
+        logout_confirm_desc: 'Вы точно хотите выйти из своей учетной записи?',
     },
     en: {
         login_title: 'Login',
@@ -77,5 +83,8 @@ export const Translations = {
         coming_soon: 'Coming soon...',
         theme: 'Theme',
         language: 'Language',
+        cancel: 'Cancel',
+        confirm_logout: 'Logout',
+        logout_confirm_desc: 'Are you sure you want to log out of your account?',
     },
 };

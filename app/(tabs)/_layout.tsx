@@ -2,6 +2,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
+import { Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CustomHeader from '../../components/CustomHeader';
 import { Colors } from '../../constants/Colors';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -11,6 +13,7 @@ export default function TabLayout() {
   const { theme } = useTheme();
   const { i18n } = useLanguage();
   const colors = Colors[theme];
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -19,9 +22,9 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: 'transparent',
-          height: 60,
+          height: 60 + (Platform.OS === 'ios' ? 0 : 0), // Base height 60
           paddingBottom: 8,
-          marginBottom: 10,
+          marginBottom: Math.max(insets.bottom, 10), // Ensure it clears the navigation bar
           marginHorizontal: 10,
           borderRadius: 20,
           position: 'absolute', // Required for floating effect

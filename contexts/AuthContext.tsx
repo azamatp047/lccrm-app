@@ -1,7 +1,7 @@
 
 import { useRouter } from 'expo-router';
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { AuthApi, StudentApi } from '../services/api';
+import { AuthApi, StudentApi, setUnauthorizedCallback } from '../services/api';
 import { StorageService, TokenStorage } from '../services/storage';
 
 interface User {
@@ -32,6 +32,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const router = useRouter();
 
     useEffect(() => {
+        // Register the logout callback for 401 events
+        setUnauthorizedCallback(() => {
+            // We need to use a non-hook version if possible or ensure this closure is fresh.
+            // But strict logout is simple:
+            logout();
+        });
+
         const restoreSession = async () => {
             try {
                 const token = await TokenStorage.getAccessToken();
@@ -66,6 +73,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         };
         restoreSession();
     }, []);
+
+    // Ensure we unregister or update if context unmounts, though AuthProvider is usually root.
+    // Ideally setUnauthorizedCallback should handle single listener or be replaced.
+    // With current implementation in api.ts, it replaces the global variable, which is fine for a singleton AuthProvider.
 
 
     const login = async (username: string, password: string, role: 'student' | 'parent') => {

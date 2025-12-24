@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
         padding: 20,
     },
     listContent: {
-        paddingBottom: 40,
+        paddingBottom: 100,
     },
     detailHeader: {
         padding: 20,

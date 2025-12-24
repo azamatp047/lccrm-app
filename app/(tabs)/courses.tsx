@@ -219,7 +219,7 @@ export default function CoursesScreen() {
     }
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background}]}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
             <FlatList
                 data={courses}
                 keyExtractor={(item) => `course-${item.id}`}
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     },
     listContent: {
         padding: 16,
-        paddingBottom: 40,
+        paddingBottom: 100,
     },
     headerRow: {
         paddingHorizontal: 16,

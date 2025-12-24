@@ -1,5 +1,6 @@
 
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -20,12 +21,13 @@ import { CoinInstance, StudentApi, StudentNotification } from '../services/api';
 
 export default function CustomHeader() {
     const insets = useSafeAreaInsets();
-    const { theme, toggleTheme } = useTheme();
+    const { theme } = useTheme();
     const { i18n, setLanguage, language } = useLanguage();
-    const { logout, user } = useAuth();
+    const { user } = useAuth();
     const colors = Colors[theme];
+    const router = useRouter(); // Assuming expo-router
 
-    const [activeModal, setActiveModal] = useState<'none' | 'coins' | 'notifications' | 'profile'>('none');
+    const [activeModal, setActiveModal] = useState<'none' | 'coins' | 'notifications'>('none');
 
     // Notifications State
     const [notifications, setNotifications] = useState<StudentNotification[]>([]);
@@ -50,7 +52,7 @@ export default function CustomHeader() {
 
     const fetchNotifications = async () => {
         try {
-            const response = await StudentApi.getNotifications({ limit: 10 });
+            const response = await StudentApi.getCommonUnreadNotifications({ limit: 10 });
             if (response && response.results) {
                 setNotifications(response.results);
                 setUnreadCount(response.count);
@@ -91,10 +93,14 @@ export default function CustomHeader() {
 
     const closeModals = () => {
         setActiveModal('none');
+        // Note: We might want to mark them as read here if they are opened? 
+        // For now preventing auto-read on close unless requested, keeping behavior as "See all" manages explicit reads or just viewing list.
+        // Or if 'mark as read' logic is preferred when closing the unread modal:
+        /*
         if (activeModal === 'notifications') {
-            StudentApi.markNotificationRead().catch(e => console.warn(e));
-            setUnreadCount(0);
+             // Logic to mark seen notifications as read if needed
         }
+        */
     };
 
     const cycleLanguage = () => {
@@ -178,7 +184,8 @@ export default function CustomHeader() {
                         <FlatList
                             data={notifications}
                             keyExtractor={(item) => item.id.toString()}
-                            ListEmptyComponent={<Text style={{ padding: 20, textAlign: 'center', color: colors.placeholder }}>No notifications</Text>}
+                            style={{ minHeight: 400 }}
+                            ListEmptyComponent={<Text style={{ padding: 20, textAlign: 'center', color: colors.placeholder }}>No new notifications</Text>}
                             renderItem={({ item }) => (
                                 <View style={[styles.notifItem, { borderBottomColor: colors.border }]}>
                                     <Text style={[styles.notifTitle, { color: colors.text }]}>
@@ -197,29 +204,14 @@ export default function CustomHeader() {
                                 </View>
                             )}
                         />
-                    </View>
-                );
-            case 'profile':
-                return (
-                    <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-                        <Text style={[styles.modalTitle, { color: colors.text }]}>{i18n.profile}</Text>
-                        <TouchableOpacity onPress={toggleTheme} style={styles.menuItem}>
-                            <View style={[styles.iconBox, { backgroundColor: colors.background }]}>
-                                <Ionicons name={theme === 'dark' ? 'moon' : 'sunny'} size={20} color={colors.text} />
-                            </View>
-                            <Text style={[styles.menuText, { color: colors.text }]}>{i18n.theme}</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={cycleLanguage} style={styles.menuItem}>
-                            <View style={[styles.iconBox, { backgroundColor: colors.background }]}>
-                                <Ionicons name="language" size={20} color={colors.text} />
-                            </View>
-                            <Text style={[styles.menuText, { color: colors.text }]}>{i18n.language} ({language.toUpperCase()})</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={logout} style={styles.menuItem}>
-                            <View style={[styles.iconBox, { backgroundColor: colors.error + '15' }]}>
-                                <Ionicons name="log-out-outline" size={20} color={colors.error} />
-                            </View>
-                            <Text style={[styles.menuText, { color: colors.error }]}>{i18n.logout}</Text>
+                        <TouchableOpacity
+                            style={[styles.seeAllBtn, { backgroundColor: colors.primary }]}
+                            onPress={() => {
+                                closeModals();
+                                router.push('/notifications');
+                            }}
+                        >
+                            <Text style={styles.seeAllText}>See all Notifications</Text>
                         </TouchableOpacity>
                     </View>
                 );
@@ -261,14 +253,6 @@ export default function CustomHeader() {
                                 <Text style={styles.badgeText}>{unreadCount}</Text>
                             </View>
                         )}
-                    </TouchableOpacity>
-
-                    {/* Profile */}
-                    <TouchableOpacity
-                        style={styles.iconBtn}
-                        onPress={() => setActiveModal('profile')}
-                    >
-                        <Ionicons name="person-circle-outline" size={30} color={colors.text} />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -476,6 +460,28 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 10,
         fontWeight: 'bold',
+    },
+    seeAllBtn: {
+        marginTop: 15,
+        paddingVertical: 12,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    seeAllText: {
+        color: '#fff',
+        fontWeight: '600',
+        fontSize: 16,
+    },
+    langBtn: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    langText: {
+        fontWeight: 'bold',
+        fontSize: 14,
     },
 });
 

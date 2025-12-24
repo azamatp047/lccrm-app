@@ -52,6 +52,12 @@
         "projectId": "a4879408-87e4-4740-b4c5-faa157033f48"
       }
     },
-    "owner": "azamat047"
+    "owner": "azamat047",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/a4879408-87e4-4740-b4c5-faa157033f48"
+    }
   }
 }

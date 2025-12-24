@@ -45,6 +45,25 @@ export interface GroupDetails {
     progress: string;
 }
 
+export interface LessonRoom {
+    id: number;
+    number: string;
+    name: string;
+}
+
+export interface Lesson {
+    id: number;
+    topic: string | null;
+    start_time: string;
+    end_time: string;
+    teachers: string[];
+    room: LessonRoom | null;
+}
+
+export interface MyLessonsResponse {
+    [date: string]: Lesson[];
+}
+
 export interface RankingStudent {
     id: number;
     user: string;
@@ -118,6 +137,8 @@ export interface Notification {
 
 export interface StudentNotification {
     id: number;
+    is_archived?: boolean; // Added based on new response
+    is_read?: boolean;     // Added based on new response
     notification: Notification;
 }
 
@@ -145,13 +166,24 @@ export interface LoginResponse {
     // Retaining existing logic for LoginResponse for now but widening it.
     access?: string;
     refresh?: string;
+    access_token?: string;
+    refresh_token?: string;
     [key: string]: any;
 }
 
 interface RefreshResponse {
-    access: string;
-    refresh: string;
+    access?: string;
+    refresh?: string;
+    access_token?: string;
+    refresh_token?: string;
 }
+
+// Global callback for unauthorized events (e.g. refresh token expired)
+let onUnauthorizedCallback: (() => void) | null = null;
+
+export const setUnauthorizedCallback = (callback: () => void) => {
+    onUnauthorizedCallback = callback;
+};
 
 // --- Course Interfaces ---
 
@@ -220,7 +252,16 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
                 headers,
             });
             if (retryResponse.ok) return await retryResponse.json();
+
+            // If retry still fails with 401, trigger logout
+            if (retryResponse.status === 401 && onUnauthorizedCallback) {
+                onUnauthorizedCallback();
+            }
         } else {
+            // Refresh failed, trigger logout
+            if (onUnauthorizedCallback) {
+                onUnauthorizedCallback();
+            }
             throw new ApiError(401, 'Unauthorized');
         }
     }
@@ -253,8 +294,15 @@ async function refreshTokenFlow(): Promise<boolean> {
 
         if (response.ok) {
             const data: RefreshResponse = await response.json();
-            await TokenStorage.setTokens(data.access, data.refresh);
-            return true;
+            const newAccess = data.access || data.access_token;
+            const newRefresh = data.refresh || data.refresh_token; // Some APIs rotate refresh tokens too
+
+            if (newAccess) {
+                // Keep old refresh token if new one is not provided, unless it's strictly rotated
+                const refreshToStore = newRefresh || refresh;
+                await TokenStorage.setTokens(newAccess, refreshToStore);
+                return true;
+            }
         }
         return false;
     } catch (e) {
@@ -317,12 +365,9 @@ export const StudentApi = {
     },
 
     // Note: Spec path is /api/v1/students/my-lessons/
-    getMyLessons: async (params: { limit?: number; offset?: number; ordering?: string; month?: number; year?: number } = {}) => {
+    getMyLessons: async (params: { month?: number; year?: number } = {}): Promise<MyLessonsResponse> => {
         const query = new URLSearchParams(params as any).toString();
-        return await request<any>(`/my-lessons/?${query}`); // Returns No Body in spec? Usually means list if GET.
-        // Spec says: "responses: '200': description: No response body".
-        // This confusing. If it's a calendar, it returns SOMETHING.
-        // I'll return 'any' for now.
+        return await request<MyLessonsResponse>(`/my-lessons/?${query}`);
     },
 
     getProfile: async (): Promise<StudentProfileDetails> => {
@@ -388,10 +433,27 @@ export const StudentApi = {
 
     markNotificationRead: async (params: { limit?: number; offset?: number; ordering?: string } = {}) => {
         // Spec: /api/v1/students/profile/notifications/mark-as-read/
-        // It's a GET request in the spec? That's weird for a "mark as read" action (usually POST).
-        // But spec says GET.
         const query = new URLSearchParams(params as any).toString();
         return await request<PaginatedResponse<UserNotificationsUpdate>>(`/profile/notifications/mark-as-read/?${query}`);
+    },
+
+    getCommonUnreadNotifications: async (params: { limit?: number; offset?: number; ordering?: string } = {}) => {
+        const query = new URLSearchParams(params as any).toString();
+        return await request<PaginatedResponse<StudentNotification>>(`/common/unread-notifications/?${query}`);
+    },
+
+    getCommonAllNotifications: async () => {
+        // User confirmed this returns a direct array, not paginated results
+        return await request<StudentNotification[]>(`/common/all-notifications/`);
+    },
+
+    archiveNotification: async (id: number) => {
+        return await request<any>(`/common/notifications/archive/${id}/`);
+    },
+
+    markAllNotificationsAsRead: async () => {
+        // User specified: https://lccrm.uz/api/v1/students/common/notifications/mark-as-read/
+        return await request<any>(`/common/notifications/mark-as-read/`);
     },
 
     getStudentGroups: async (params: { limit?: number; offset?: number; ordering?: string } = {}) => {
