@@ -5,8 +5,10 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 
+import { activateKeepAwake } from 'expo-keep-awake';
 import * as NavigationBar from 'expo-navigation-bar';
 import { Platform } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../constants/Colors';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { LanguageProvider } from '../contexts/LanguageContext';
@@ -53,13 +55,13 @@ function RootLayoutNav() {
   }, [user, isLoading, rootNavigationState, segments]);
 
   return (
-    <>
+    <SafeAreaView style={{ flex: 1, backgroundColor: Colors[theme].background }}>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
-    </>
+    </SafeAreaView>
   );
 }
 
@@ -78,17 +80,29 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
+  useEffect(() => {
+    try {
+      if (Platform.OS !== 'web') {
+        activateKeepAwake();
+      }
+    } catch (e) {
+      console.warn('Keep awake error:', e);
+    }
+  }, []);
+
   // if (!loaded) {
   //   return null;
   // }
 
   return (
-    <AuthProvider>
-      <LanguageProvider>
-        <ThemeProvider>
-          <RootLayoutNav />
-        </ThemeProvider>
-      </LanguageProvider>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <LanguageProvider>
+          <ThemeProvider>
+            <RootLayoutNav />
+          </ThemeProvider>
+        </LanguageProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }

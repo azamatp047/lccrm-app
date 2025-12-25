@@ -1,0 +1,8 @@
+# Step 1: Preview APK build
+npx eas build -p android --profile preview
+
+# Step 2: OTA update yuborish
+npx eas update --branch preview
+
+# Step 3: Preview APK download
+npx eas build -p android --profile preview --download
