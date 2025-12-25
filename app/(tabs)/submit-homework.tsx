@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 16,
-        paddingTop: 60,
+        paddingTop: 10,
         paddingBottom: 16,
     },
     backButton: {
@@ -129,6 +129,7 @@ const styles = StyleSheet.create({
     },
     content: {
         padding: 20,
+        paddingBottom: 120,
     },
     sectionTitle: {
         fontSize: 16,

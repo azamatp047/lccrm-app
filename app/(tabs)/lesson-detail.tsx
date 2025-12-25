@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
     },
     content: {
         padding: 16,
-        paddingBottom: 100,
+        paddingBottom: 120,
     },
     videoContainer: {
         height: 200,

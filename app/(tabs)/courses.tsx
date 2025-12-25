@@ -60,6 +60,11 @@ const CoursesPageCard = ({
                     <Text style={[styles.coursesCardTitle, { color: colors.text }]} numberOfLines={2}>
                         {course.course_name || course.group_name}
                     </Text>
+                    {course.course_name && course.group_name && (
+                        <Text style={[styles.coursesCardGroupName, { color: colors.placeholder }]}>
+                            {course.group_name}
+                        </Text>
+                    )}
                     <Text style={[styles.coursesCardTeacher, { color: colors.placeholder }]}>
                         {teacherName}
                     </Text>
@@ -331,6 +336,10 @@ const styles = StyleSheet.create({
     },
     coursesCardTeacher: {
         fontSize: 14,
+    },
+    coursesCardGroupName: {
+        fontSize: 12,
+        marginBottom: 2,
     },
     bookIconContainer: {
         width: 44,

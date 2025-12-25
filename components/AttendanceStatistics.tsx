@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { Colors } from '../constants/Colors';
+import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { AttendanceStatistics, StudentApi } from '../services/api';
 
@@ -12,8 +14,10 @@ interface AttendanceStatisticsCardProps {
 
 export const AttendanceStatisticsCard: React.FC<AttendanceStatisticsCardProps> = ({ onDataFetched }) => {
     const { theme } = useTheme();
+    const { i18n } = useLanguage();
     const { width } = useWindowDimensions();
     const colors = Colors[theme];
+    const router = useRouter();
     const [data, setData] = useState<AttendanceStatistics | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -57,8 +61,15 @@ export const AttendanceStatisticsCard: React.FC<AttendanceStatisticsCardProps> =
     return (
         <View style={[styles.mainCard, { backgroundColor: mainCardBg, borderColor, borderWidth: isDark ? 1 : 0 }]}>
             <View style={styles.header}>
-                <Text style={[styles.title, { color: titleColor }]}>Attendance</Text>
-                <Ionicons name="calendar-outline" size={20} color={calendarIconColor} />
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="calendar-outline" size={20} color={calendarIconColor} style={{ marginRight: 8 }} />
+                    <Text style={[styles.title, { color: titleColor }]}>{i18n.attendance}</Text>
+                </View>
+                <TouchableOpacity onPress={() => router.push('/(tabs)/attendance')}>
+                    <Text style={[styles.viewAllText, { color: titleColor, opacity: 0.8 }]}>
+                        {i18n.view_all} &gt;
+                    </Text>
+                </TouchableOpacity>
             </View>
 
             <View style={styles.statsRow}>
@@ -100,6 +111,11 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.15,
         shadowRadius: 16,
         elevation: 6,
+    },
+    viewAllText: {
+        fontSize: 13,
+        fontWeight: '700',
+        letterSpacing: 0.3,
     },
     header: {
         flexDirection: 'row',

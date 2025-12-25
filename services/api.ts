@@ -1,5 +1,6 @@
-
+import * as FileSystem from 'expo-file-system/legacy';
 import { StorageService, TokenStorage } from './storage';
+
 
 // Language Handling
 export type Language = 'uz' | 'ru' | 'en';
@@ -215,6 +216,26 @@ export interface AttendanceStatistics {
     rate_attendance_count: number;
 }
 
+export interface AttendanceLesson {
+    id: number;
+    topic: string | null;
+    start_time: string;
+    end_time: string;
+    lesson_date: string;
+}
+
+export interface AttendanceRecord {
+    id: number;
+    lesson: AttendanceLesson;
+    status: 'Absent' | 'Present' | 'Upcoming';
+    came_at: string | null;
+    left_at: string | null;
+}
+
+export interface AttendanceResponse {
+    [date: string]: AttendanceRecord[];
+}
+
 // Helpers
 class ApiError extends Error {
     constructor(public status: number, public message: string) {
@@ -374,50 +395,57 @@ export const StudentApi = {
         return await request<StudentProfileDetails>('/profile/');
     },
 
-    updateProfile: async (data: Partial<StudentProfileUpdate> & { picture?: any }) => {
-        // If picture is present, we might need FormData.
-        const isMultipart = data.picture && typeof data.picture !== 'string';
+    updateProfile: async (data: { phone: string | null; email: string; first_name: string; last_name: string }): Promise<StudentProfileUpdate> => {
+        return await request<StudentProfileUpdate>('/profile/update/', {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        });
+    },
 
-        if (isMultipart) {
-            // Need special handling for FormData if uploading file via React Native
-            const formData = new FormData();
-            Object.keys(data).forEach(key => {
-                const value = (data as any)[key];
-                if (value !== undefined && value !== null) {
-                    if (key === 'picture' && typeof value === 'object' && value.uri) {
-                        // React Native specific file object
-                        formData.append('picture', {
-                            uri: value.uri,
-                            name: value.name || 'profile.jpg',
-                            type: value.type || 'image/jpeg',
-                        } as any);
-                    } else {
-                        formData.append(key, String(value));
-                    }
-                }
-            });
 
+    updateProfilePicture: async (imageUri: string, fileName?: string, fileType?: string): Promise<StudentProfileUpdate> => {
+        try {
             const baseUrl = GET_BASE_URL();
             const token = await TokenStorage.getAccessToken();
-            const headers: Record<string, string> = {
-                'Accept': 'application/json',
-                // Content-Type is set automatically by fetch for FormData
-            };
-            if (token) headers['Authorization'] = `Bearer ${token}`;
 
-            const response = await fetch(`${baseUrl}/profile/update/`, {
-                method: 'PATCH',
-                headers,
-                body: formData,
-            });
-            if (!response.ok) throw new ApiError(response.status, 'Profile update failed');
-            return await response.json();
+            // Use expo-file-system for proper file uploads in React Native
+            const fileExtension = imageUri.split('.').pop() || 'jpg';
+            const finalFileName = fileName || `profile_${Date.now()}.${fileExtension}`;
+            const finalFileType = fileType || `image/${fileExtension}`;
 
-        } else {
-            return await request<StudentProfileUpdate>('/profile/update/', {
-                method: 'PATCH',
-                body: JSON.stringify(data),
+            console.log('Uploading file with FileSystem:', {
+                uri: imageUri,
+                name: finalFileName,
+                type: finalFileType,
+                uploadUrl: `${baseUrl}/profile/picture/`,
             });
+
+            const uploadResponse = await FileSystem.uploadAsync(
+                `${baseUrl}/profile/picture/`,
+                imageUri,
+                {
+                    httpMethod: 'PATCH',
+                    uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+                    fieldName: 'picture',
+                    headers: {
+                        'Authorization': token ? `Bearer ${token}` : '',
+                        'Accept': 'application/json',
+                    },
+                    parameters: {},
+                }
+            );
+
+            console.log('Upload response status:', uploadResponse.status);
+            console.log('Upload response body:', uploadResponse.body);
+
+            if (uploadResponse.status !== 200 && uploadResponse.status !== 201) {
+                throw new ApiError(uploadResponse.status, uploadResponse.body || 'Profile picture update failed');
+            }
+
+            return JSON.parse(uploadResponse.body);
+        } catch (error) {
+            console.error('updateProfilePicture error:', error);
+            throw error;
         }
     },
 
@@ -467,5 +495,10 @@ export const StudentApi = {
         // Full URL: https://lccrm.uz/api/v1/students/dashboard/attendance/statistics/
         // Base URL is https://lccrm.uz/api/v1/students
         return await request<AttendanceStatistics>('/dashboard/attendance/statistics/');
+    },
+
+    getAttendance: async (): Promise<AttendanceResponse> => {
+        // Full URL: https://lccrm.uz/api/v1/students/dashboard/attendance/
+        return await request<AttendanceResponse>('/dashboard/attendance/');
     },
 };

@@ -5,6 +5,9 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 
+import * as NavigationBar from 'expo-navigation-bar';
+import { Platform } from 'react-native';
+import { Colors } from '../constants/Colors';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { LanguageProvider } from '../contexts/LanguageContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
@@ -19,6 +22,21 @@ function RootLayoutNav() {
 
   const rootNavigationState = useRootNavigationState();
   const segments = useSegments();
+
+  useEffect(() => {
+    async function updateNavigationBar() {
+      if (Platform.OS === 'android') {
+        const colors = Colors[theme];
+        try {
+          await NavigationBar.setBackgroundColorAsync(colors.background);
+          await NavigationBar.setButtonStyleAsync(theme === 'dark' ? 'light' : 'dark');
+        } catch (e) {
+          console.warn('Navigation Bar error:', e);
+        }
+      }
+    }
+    updateNavigationBar();
+  }, [theme]);
 
   useEffect(() => {
     if (!rootNavigationState?.key) return;

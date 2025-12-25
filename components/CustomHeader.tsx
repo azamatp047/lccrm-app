@@ -1,6 +1,5 @@
-
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -25,7 +24,8 @@ export default function CustomHeader() {
     const { i18n, setLanguage, language } = useLanguage();
     const { user } = useAuth();
     const colors = Colors[theme];
-    const router = useRouter(); // Assuming expo-router
+    const router = useRouter();
+    const pathname = usePathname();
 
     const [activeModal, setActiveModal] = useState<'none' | 'coins' | 'notifications'>('none');
 
@@ -93,23 +93,6 @@ export default function CustomHeader() {
 
     const closeModals = () => {
         setActiveModal('none');
-        // Note: We might want to mark them as read here if they are opened? 
-        // For now preventing auto-read on close unless requested, keeping behavior as "See all" manages explicit reads or just viewing list.
-        // Or if 'mark as read' logic is preferred when closing the unread modal:
-        /*
-        if (activeModal === 'notifications') {
-             // Logic to mark seen notifications as read if needed
-        }
-        */
-    };
-
-    const cycleLanguage = () => {
-        const next = {
-            'en': 'uz',
-            'uz': 'ru',
-            'ru': 'en'
-        }[language] as 'en' | 'uz' | 'ru' || 'en';
-        setLanguage(next);
     };
 
     const renderCoinItem = ({ item }: { item: CoinInstance }) => {
@@ -220,15 +203,29 @@ export default function CustomHeader() {
         }
     };
 
+    const mainRoutes = ['/', '/schedule', '/courses', '/ratings', '/profile'];
+    const showBackButton = router.canGoBack() && !mainRoutes.includes(pathname);
+
     return (
         <View style={[styles.container, { backgroundColor: colors.surface, paddingTop: insets.top }]}>
             <View style={styles.headerRow}>
-                {/* Left: Branding */}
+                {/* Left: Branding or Back Button */}
                 <View style={styles.branding}>
-                    <View style={[styles.logoCircle, { backgroundColor: colors.primary }]}>
-                        <Ionicons name="school" size={20} color="#fff" />
-                    </View>
-                    <Text style={[styles.brandText, { color: colors.text }]}>LC_CRM</Text>
+                    {showBackButton ? (
+                        <TouchableOpacity
+                            style={styles.backBtn}
+                            onPress={() => router.back()}
+                        >
+                            <Ionicons name="chevron-back" size={28} color={colors.text} />
+                        </TouchableOpacity>
+                    ) : (
+                        <>
+                            <View style={[styles.logoCircle, { backgroundColor: colors.primary }]}>
+                                <Ionicons name="school" size={20} color="#fff" />
+                            </View>
+                            <Text style={[styles.brandText, { color: colors.text }]}>LC_CRM</Text>
+                        </>
+                    )}
                 </View>
 
                 {/* Right: Actions */}
@@ -297,6 +294,10 @@ const styles = StyleSheet.create({
     branding: {
         flexDirection: 'row',
         alignItems: 'center',
+    },
+    backBtn: {
+        padding: 4,
+        marginLeft: -8,
     },
     logoCircle: {
         width: 32,
@@ -408,23 +409,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '800',
     },
-    menuItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 14,
-        gap: 16,
-    },
-    iconBox: {
-        width: 40,
-        height: 40,
-        borderRadius: 12,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    menuText: {
-        fontSize: 17,
-        fontWeight: '600',
-    },
     notifItem: {
         paddingVertical: 14,
         borderBottomWidth: 1,
@@ -472,16 +456,4 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         fontSize: 16,
     },
-    langBtn: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    langText: {
-        fontWeight: 'bold',
-        fontSize: 14,
-    },
 });
-

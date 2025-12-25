@@ -4,6 +4,7 @@ import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native
 
 interface HomeCourseCardProps {
   title: string;
+  group_name?: string;
   completed: number;
   total: number;
   progress: number; // 0-100
@@ -18,7 +19,7 @@ interface HomeCourseCardProps {
   };
 }
 
-export const HomeCourseCard: React.FC<HomeCourseCardProps> = ({ title, completed, total, progress, onPress, colors }) => {
+export const HomeCourseCard: React.FC<HomeCourseCardProps> = ({ title, group_name, completed, total, progress, onPress, colors }) => {
   const progressAnim = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
@@ -58,10 +59,15 @@ export const HomeCourseCard: React.FC<HomeCourseCardProps> = ({ title, completed
       activeOpacity={0.85}
     >
       <View style={styles.headerRow}>
-        <Text style={[styles.title, { color: c.text }]}>{title}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.title, { color: c.text }]} numberOfLines={1}>{title}</Text>
+          {group_name && group_name !== title && (
+            <Text style={[styles.groupName, { color: c.placeholder }]} numberOfLines={1}>{group_name}</Text>
+          )}
+        </View>
         <Text style={[styles.progressText, { color: c.placeholder }]}>{completed}/{total}</Text>
       </View>
-      <View style={[styles.progressBarBg, { backgroundColor: c.border }]}> 
+      <View style={[styles.progressBarBg, { backgroundColor: c.border }]}>
         <Animated.View style={[styles.progressBar, { width: widthInterpolate, backgroundColor: c.primary }]} />
       </View>
       <Text style={[styles.percentText, { color: c.primary }]}>{progress}% Complete</Text>
@@ -90,8 +96,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 17,
     fontWeight: '700',
-    flex: 1,
     letterSpacing: 0.1,
+  },
+  groupName: {
+    fontSize: 13,
+    marginTop: 2,
   },
   progressText: {
     fontSize: 15,

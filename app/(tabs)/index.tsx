@@ -132,6 +132,7 @@ export default function HomeScreen() {
                   <HomeCourseCard
                     key={group.id}
                     title={group.course_name || group.group_name}
+                    group_name={group.group_name}
                     completed={group.progress?.completed_lesson_count || 0}
                     total={group.progress?.all_lessons || 0}
                     progress={group.progress?.progress_rate || 0}

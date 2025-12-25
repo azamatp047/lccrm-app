@@ -2,82 +2,63 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CustomHeader from '../../components/CustomHeader';
-import { Colors } from '../../constants/Colors';
+import CustomTabBar from '../../components/CustomTabBar';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { useTheme } from '../../contexts/ThemeContext';
 
 export default function TabLayout() {
-  const { theme } = useTheme();
   const { i18n } = useLanguage();
-  const colors = Colors[theme];
-  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
+      tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
         header: () => <CustomHeader />,
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: 'transparent',
-          height: 60 + (Platform.OS === 'ios' ? 0 : 0), // Base height 60
-          paddingBottom: 8,
-          marginBottom: Math.max(insets.bottom, 10), // Ensure it clears the navigation bar
-          marginHorizontal: 10,
-          borderRadius: 20,
-          position: 'absolute', // Required for floating effect
-          shadowColor: '#000',
-          shadowOffset: {
-            width: 0,
-            height: 4,
-          },
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
-          elevation: 5,
-        },
-        tabBarActiveTintColor: colors.tint,
-        tabBarInactiveTintColor: colors.tabIconDefault,
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
-        },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: i18n.home,
-          tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="schedule"
         options={{
           title: i18n.schedule,
-          tabBarIcon: ({ color, size }) => <Ionicons name="calendar-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="courses"
         options={{
           title: i18n.courses,
-          tabBarIcon: ({ color, size }) => <Ionicons name="book-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'book' : 'book-outline'} size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="ratings"
         options={{
           title: i18n.ratings,
-          tabBarIcon: ({ color, size }) => <Ionicons name="star-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'star' : 'star-outline'} size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: i18n.profile,
-          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'person' : 'person-outline'} size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -93,10 +74,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="attendance"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="submit-homework"
         options={{
           href: null,
-          tabBarStyle: { display: 'none' }, // Check if this hides the tab bar ON the page too, usually desirable for full screen forms
         }}
       />
     </Tabs>
